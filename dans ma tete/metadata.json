@@ -1,0 +1,6 @@
+{
+  "name": "Kaïna - Dans ma tête",
+  "description": "Écoute exclusive en avant-première du single Dans ma tête par Kaïna avant sa sortie officielle le 16 Octobre 2026.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
