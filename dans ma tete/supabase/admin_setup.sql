@@ -88,14 +88,16 @@ create policy "Admins can delete fan signups"
   using ((select public.is_site_admin()));
 grant select, update, delete on public.fan_signups to authenticated;
 
-create or replace function public.register_fan(p_email text)
-returns void
+drop function if exists public.register_fan(text);
+create function public.register_fan(p_email text)
+returns boolean
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
   normalized_email text := lower(trim(p_email));
+  listen_available boolean;
 begin
   if normalized_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
     raise exception 'Adresse email invalide';
@@ -104,11 +106,56 @@ begin
   insert into public.fan_signups (email)
   values (normalized_email)
   on conflict (email) do nothing;
+
+  select not has_played
+    into listen_available
+    from public.fan_signups
+    where email = normalized_email;
+
+  return coalesce(listen_available, false);
 end;
 $$;
 
 revoke all on function public.register_fan(text) from public;
 grant execute on function public.register_fan(text) to anon, authenticated;
+
+create or replace function public.start_fan_listen(p_email text)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  normalized_email text := lower(trim(p_email));
+begin
+  update public.fan_signups
+    set has_played = true,
+        played_at = coalesce(played_at, now())
+    where email = normalized_email
+      and not has_played;
+
+  return found;
+end;
+$$;
+
+revoke all on function public.start_fan_listen(text) from public;
+grant execute on function public.start_fan_listen(text) to anon, authenticated;
+
+create or replace function public.complete_fan_listen(p_email text)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.fan_signups
+    set has_completed = true,
+        completed_at = coalesce(completed_at, now())
+    where email = lower(trim(p_email))
+      and has_played;
+$$;
+
+revoke all on function public.complete_fan_listen(text) from public;
+grant execute on function public.complete_fan_listen(text) to anon, authenticated;
 
 insert into storage.buckets (id, name, public)
 values ('covers', 'covers', true), ('audio', 'audio', true)

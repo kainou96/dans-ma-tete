@@ -46,19 +46,25 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
     setErrorMessage(null);
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = findFanByEmail(normalizedEmail);
+    const existing = isSupabaseConfigured ? undefined : findFanByEmail(normalizedEmail);
 
     if (existing && existing.hasPlayed) {
       setIsLoading(false);
       setErrorMessage(
-        'Cette adresse email a déjà profité de son écoute unique. L’accès exclusif est strictement limité à une seule écoute.'
+        'Une écoute a déjà été démarrée avec cette adresse e-mail.'
       );
       return;
     }
 
     try {
       if (isSupabaseConfigured) {
-        await registerFanInSupabase(normalizedEmail);
+        const listenAvailable = await registerFanInSupabase(normalizedEmail);
+        if (!listenAvailable) {
+          setErrorMessage(
+            'Une écoute a déjà été démarrée avec cette adresse e-mail.'
+          );
+          return;
+        }
       }
 
       registerOrGetFan(normalizedEmail, true);
@@ -96,7 +102,7 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <div className="space-y-1 leading-relaxed">
             <p>{errorMessage}</p>
-            {errorMessage.includes('déjà profité') && (
+            {errorMessage.includes('déjà') && (
               <a
                 href={config.instagramUrl}
                 target="_blank"

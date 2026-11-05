@@ -8,7 +8,6 @@ import {
   SiteConfig,
   FanRecord,
   saveSiteConfigAsync,
-  getAllFans,
   resetFanListen,
   deleteFan,
   clearAllListens,
@@ -143,21 +142,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const refreshFans = async () => {
     const remoteFans = await loadFansFromSupabase();
-    const localStateByEmail = new Map(
-      getAllFans().map((fan) => [fan.email.toLowerCase(), fan])
-    );
-    setFans(remoteFans.map((fan) => {
-      const localFan = localStateByEmail.get(fan.email.toLowerCase());
-      return localFan
-        ? {
-            ...fan,
-            hasPlayed: localFan.hasPlayed,
-            hasCompleted: localFan.hasCompleted,
-            playedAt: localFan.playedAt,
-            completedAt: localFan.completedAt,
-          }
-        : fan;
-    }));
+    setFans(remoteFans);
   };
 
   const handleLogin = async (e: React.FormEvent) => {

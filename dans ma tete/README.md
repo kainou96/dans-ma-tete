@@ -25,10 +25,12 @@ Site de pré-save et d’écoute exclusive, avec un espace admin sécurisé par 
    ```
 
    Garde les guillemets absents et ne laisse pas les valeurs d’exemple. Enregistre le fichier, puis arrête et relance le serveur local (`npm run dev`). L’URL et la clé publique peuvent être utilisées dans le navigateur ; la clé `service_role`, elle, ne doit jamais être exposée.
-7. Pour le site en ligne sur Netlify, ajoute les mêmes variables dans **Site configuration > Environment variables**, puis relance un déploiement.
+7. Pour le site en ligne sur Netlify, ajoute les mêmes variables dans **Site configuration > Environment variables**, puis relance un déploiement. Après une mise à jour du code qui modifie les fonctions Supabase, réexécute également tout le script `supabase/admin_setup.sql` dans le SQL Editor.
 8. Ouvre le site, clique sur le cadenas admin et connecte-toi avec le compte créé à l’étape 2. Les paramètres du site et les fichiers envoyés seront alors enregistrés dans Supabase et visibles par les visiteurs.
 
-Le formulaire public enregistre les adresses e-mail dans `fan_signups`. Seul le compte admin autorisé peut consulter, modifier ou supprimer ces inscriptions. La configuration du site est lisible par les visiteurs pour afficher la page, mais seule la personne autorisée peut la modifier. Les fichiers des buckets `covers` et `audio` sont servis publiquement pour que le site puisse les afficher et les lire ; une URL audio peut donc être partagée. Ce système de pré-écoute ne remplace pas une protection DRM ou un service de diffusion privé.
+Le formulaire public enregistre les adresses e-mail dans `fan_signups`. Le démarrage et la fin d’écoute sont enregistrés dans Supabase, et le démarrage est réservé atomiquement par adresse e-mail afin que plusieurs appareils ne puissent pas tous démarrer une écoute avec la même adresse. Seul le compte admin autorisé peut consulter, modifier ou supprimer les inscriptions. La configuration du site est lisible par les visiteurs pour afficher la page, mais seule la personne autorisée peut la modifier.
+
+La confirmation d’adresse e-mail n’est pas activée : cette limite porte donc sur l’adresse saisie, pas sur l’identité. Une personne peut utiliser plusieurs adresses ou saisir celle de quelqu’un d’autre. Les fichiers des buckets `covers` et `audio` sont servis publiquement pour que le site puisse les afficher et les lire ; une URL audio peut donc être partagée. Ce système de pré-écoute ne remplace pas une protection DRM ou un service de diffusion privé.
 
 ## Lancer le site en local
 

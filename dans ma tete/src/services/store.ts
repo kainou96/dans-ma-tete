@@ -46,7 +46,7 @@ const DEFAULT_CONFIG: SiteConfig = {
   songTitle: 'Dans ma tête',
   artistName: 'Kaïna',
   releaseDate: '16 Octobre 2026',
-  warningText: 'Attention ! Installe toi confortablement, met des écouteurs et écoute ça au calme. Tu a accès à une seule unique écoute de mon titre avant la sortie officielle.',
+  warningText: 'Installe-toi confortablement, mets des écouteurs et écoute ça au calme. Une écoute est autorisée par adresse e-mail avant la sortie officielle.',
   thanksMessage: 'Merci énormément d’avoir écouter ma chanson jusqu’au bout 🥹 j’espère vraiment qu’elle t’a plu, si tu as le temps de me laisser ton impression, ça compte vraiment pour moi ❤️ J\'ai trop hâte de te lire !',
 };
 

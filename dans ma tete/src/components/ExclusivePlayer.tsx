@@ -5,6 +5,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { SiteConfig, markFanHasStartedPlaying, markFanHasCompleted } from '../services/store';
+import {
+  completeFanListenInSupabase,
+  isSupabaseConfigured,
+  startFanListenInSupabase,
+} from '../services/supabase';
 import { CoverArtView } from './CoverArtView';
 import { Play, Pause, Volume2, VolumeX, ArrowLeft, Send, Phone, Video, Info, ChevronLeft } from 'lucide-react';
 
@@ -30,7 +35,10 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
   const [volume, setVolume] = useState(0.85);
   const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [completionSyncError, setCompletionSyncError] = useState(false);
 
   const audioSource = config.audioSrc || defaultAudioUrl;
 
@@ -48,29 +56,41 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
   }, [volume, isMuted]);
 
   // When user hits Play for the first time, mark as started
-  const handleTogglePlay = () => {
-    if (isFinished) return;
+  const handleTogglePlay = async () => {
+    if (isFinished || isStarting || accessDenied) return;
     if (!audioRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      if (!hasStartedPlaying) {
-        setHasStartedPlaying(true);
-        markFanHasStartedPlaying(userEmail);
-      }
+      setIsStarting(true);
+      setAudioError(null);
+      try {
+        if (!hasStartedPlaying) {
+          const canStart = await startFanListenInSupabase(userEmail);
+          if (!canStart) {
+            setAccessDenied(true);
+            setAudioError('Une écoute a déjà été démarrée avec cette adresse e-mail.');
+            return;
+          }
 
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          setAudioError(null);
-        })
-        .catch((err) => {
-          console.error('Audio play error:', err);
-          setAudioError('Impossible de démarrer la lecture. Vérifie les autorisations de ton navigateur.');
-        });
+          setHasStartedPlaying(true);
+          markFanHasStartedPlaying(userEmail);
+        }
+
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (error) {
+        console.error('Audio play or listen registration failed:', error);
+        setAudioError(
+          isSupabaseConfigured && !hasStartedPlaying
+            ? 'Impossible de vérifier l’accès à l’écoute. Vérifie ta connexion puis réessaie.'
+            : 'Impossible de démarrer la lecture. Vérifie les autorisations de ton navigateur.'
+        );
+      } finally {
+        setIsStarting(false);
+      }
     }
   };
 
@@ -90,10 +110,28 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
   };
 
   // When track ends: switch to Instagram DM view directly replacing the audio session!
-  const handleEnded = () => {
+  const handleEnded = async () => {
     setIsPlaying(false);
     setIsFinished(true);
-    markFanHasCompleted(userEmail);
+    try {
+      await completeFanListenInSupabase(userEmail);
+      markFanHasCompleted(userEmail);
+      setCompletionSyncError(false);
+    } catch (error) {
+      console.error('Unable to record completed listen:', error);
+      setCompletionSyncError(true);
+    }
+  };
+
+  const handleRetryCompletionSync = async () => {
+    try {
+      await completeFanListenInSupabase(userEmail);
+      markFanHasCompleted(userEmail);
+      setCompletionSyncError(false);
+    } catch (error) {
+      console.error('Unable to retry completed listen sync:', error);
+      setCompletionSyncError(true);
+    }
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -168,6 +206,18 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
 
             {/* Instagram Conversation Body */}
             <div className="p-4 sm:p-5 space-y-4">
+              {completionSyncError && (
+                <div className="rounded-xl border border-rose-500/30 bg-rose-950/60 p-3 text-center text-xs text-rose-200">
+                  <p>La lecture est terminée, mais son statut n’a pas pu être synchronisé.</p>
+                  <button
+                    type="button"
+                    onClick={handleRetryCompletionSync}
+                    className="mt-2 underline underline-offset-2 cursor-pointer"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              )}
               {/* Date stamp */}
               <div className="text-center">
                 <span className="text-[11px] text-[#8e8e8e] font-sans font-medium">Aujourd&apos;hui</span>
@@ -290,13 +340,16 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
                 <button
                   type="button"
                   onClick={handleTogglePlay}
-                  className={`px-8 py-3 rounded-full flex items-center justify-center gap-2.5 font-syne font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-xl cursor-pointer ${
+                  disabled={isStarting || accessDenied}
+                  className={`px-8 py-3 rounded-full flex items-center justify-center gap-2.5 font-syne font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                     isPlaying
                       ? 'bg-black/80 hover:bg-black text-[#FCEEE3] border border-[#FCEEE3]/50 shadow-black'
                       : 'bg-gradient-to-r from-[#2a466d] via-[#1d3557] to-[#142642] hover:from-[#355787] hover:to-[#223d66] text-[#FCEEE3] border border-[#FCEEE3]/50 shadow-black/80 hover:scale-105 active:scale-95'
                   }`}
                 >
-                  {isPlaying ? (
+                  {isStarting ? (
+                    <span>VÉRIFICATION…</span>
+                  ) : isPlaying ? (
                     <>
                       <Pause className="w-4 h-4 fill-current" />
                       <span>PAUSE</span>

@@ -109,12 +109,32 @@ export async function saveSiteConfigToSupabase(config: SiteConfig): Promise<void
   if (error) throw error;
 }
 
-export async function registerFanInSupabase(email: string): Promise<void> {
+export async function registerFanInSupabase(email: string): Promise<boolean> {
   if (!supabase) {
     throw new Error('Supabase n’est pas configuré.');
   }
 
-  const { error } = await supabase.rpc('register_fan', {
+  const { data, error } = await supabase.rpc('register_fan', {
+    p_email: email.trim().toLowerCase(),
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function startFanListenInSupabase(email: string): Promise<boolean> {
+  if (!supabase) return true;
+
+  const { data, error } = await supabase.rpc('start_fan_listen', {
+    p_email: email.trim().toLowerCase(),
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function completeFanListenInSupabase(email: string): Promise<void> {
+  if (!supabase) return;
+
+  const { error } = await supabase.rpc('complete_fan_listen', {
     p_email: email.trim().toLowerCase(),
   });
   if (error) throw error;
