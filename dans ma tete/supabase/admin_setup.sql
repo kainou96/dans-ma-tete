@@ -169,6 +169,14 @@ create policy "Admins can upload site media"
     and (select public.is_site_admin())
   );
 
+drop policy if exists "Admins can view site media metadata" on storage.objects;
+create policy "Admins can view site media metadata"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id in ('covers', 'audio')
+    and (select public.is_site_admin())
+  );
+
 drop policy if exists "Admins can update site media" on storage.objects;
 create policy "Admins can update site media"
   on storage.objects for update to authenticated
