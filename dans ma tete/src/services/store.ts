@@ -20,6 +20,8 @@ export interface SiteConfig {
   coverImageFit: 'cover' | 'contain';
   coverImageShape: 'rounded' | 'square' | 'circle';
   backgroundImagePosition: 'center' | 'top' | 'bottom';
+  backgroundImageFilter: 'none' | 'cool' | 'warm' | 'grayscale';
+  backgroundImageOpacity: number;
   releaseDate: string;
   warningText: string;
   thanksMessage: string;
@@ -53,6 +55,8 @@ const DEFAULT_CONFIG: SiteConfig = {
   coverImageFit: 'cover',
   coverImageShape: 'rounded',
   backgroundImagePosition: 'center',
+  backgroundImageFilter: 'cool',
+  backgroundImageOpacity: 90,
   releaseDate: '16 Octobre 2026',
   warningText: 'Installe-toi confortablement, mets des écouteurs et écoute ça au calme. Une écoute est autorisée par adresse e-mail avant la sortie officielle.',
   thanksMessage: 'Merci énormément d’avoir écouter ma chanson jusqu’au bout 🥹 j’espère vraiment qu’elle t’a plu, si tu as le temps de me laisser ton impression, ça compte vraiment pour moi ❤️ J\'ai trop hâte de te lire !',

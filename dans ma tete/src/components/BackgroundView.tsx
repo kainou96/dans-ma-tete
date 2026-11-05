@@ -4,15 +4,33 @@
  */
 
 import React, { useMemo } from 'react';
+import type { SiteConfig } from '../services/store';
 
 interface BackgroundViewProps {
   customBgUrl: string | null;
   imagePosition?: 'center' | 'top' | 'bottom';
+  imageFilter?: SiteConfig['backgroundImageFilter'];
+  imageOpacity?: number;
+}
+
+export function getBackgroundImageFilter(filter: SiteConfig['backgroundImageFilter']): string {
+  switch (filter) {
+    case 'cool':
+      return 'saturate(0.68) contrast(1.12) brightness(0.92) hue-rotate(190deg)';
+    case 'warm':
+      return 'saturate(1.1) sepia(0.22)';
+    case 'grayscale':
+      return 'grayscale(1)';
+    case 'none':
+      return 'none';
+  }
 }
 
 export const BackgroundView: React.FC<BackgroundViewProps> = ({
   customBgUrl,
   imagePosition = 'center',
+  imageFilter = 'cool',
+  imageOpacity = 90,
 }) => {
   // Realistic artistic rain particles
   const rainDrops = useMemo(() => {
@@ -41,16 +59,17 @@ export const BackgroundView: React.FC<BackgroundViewProps> = ({
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden select-none -z-10 bg-[#070e1b]">
       {/* 1. Base Layer with CSS 'Freeze' Filter (Desaturation + Cold Blue Hues) */}
-      <div className="absolute inset-0 filter-freeze">
+      <div className={`absolute inset-0 ${customBgUrl ? '' : 'filter-freeze'}`}>
         {customBgUrl ? (
           // Custom background uploaded by Kaïna in admin
           <div className="absolute inset-0">
             <div
-              className="absolute inset-0 bg-cover opacity-90 scale-105 transition-transform duration-1000"
+              className="absolute inset-0 bg-cover scale-105 transition-all duration-700"
               style={{
                 backgroundImage: `url(${customBgUrl})`,
                 backgroundPosition: imagePosition,
-                filter: 'saturate(0.68) contrast(1.12) brightness(0.92) hue-rotate(190deg)',
+                filter: getBackgroundImageFilter(imageFilter),
+                opacity: Math.min(100, Math.max(0, imageOpacity)) / 100,
               }}
             />
           </div>

@@ -30,6 +30,8 @@ Site de pré-save et d’écoute exclusive, avec un espace admin sécurisé par 
 
 Le formulaire public enregistre les adresses e-mail dans `fan_signups`. Le démarrage et la fin d’écoute sont enregistrés dans Supabase, et le démarrage est réservé atomiquement par adresse e-mail afin que plusieurs appareils ne puissent pas tous démarrer une écoute avec la même adresse. Seul le compte admin autorisé peut consulter, modifier ou supprimer les inscriptions. La configuration du site est lisible par les visiteurs pour afficher la page, mais seule la personne autorisée peut la modifier.
 
+Dans l’administration, l’onglet **Visuels & Images** contient **Apparence du site** : police du nom de l’artiste, cadrage et forme de la pochette, position, filtre et opacité de l’image de fond. Clique sur **Enregistrer l’apparence** pour appliquer et synchroniser ces réglages.
+
 La confirmation d’adresse e-mail n’est pas activée : cette limite porte donc sur l’adresse saisie, pas sur l’identité. Une personne peut utiliser plusieurs adresses ou saisir celle de quelqu’un d’autre. Les fichiers des buckets `covers` et `audio` sont servis publiquement pour que le site puisse les afficher et les lire ; une URL audio peut donc être partagée. Ce système de pré-écoute ne remplace pas une protection DRM ou un service de diffusion privé.
 
 ## Lancer le site en local

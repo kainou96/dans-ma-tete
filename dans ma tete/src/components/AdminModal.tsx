@@ -32,6 +32,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
+import { getBackgroundImageFilter } from './BackgroundView';
 import {
   clearAllFanListensInSupabase,
   deleteFanFromSupabase,
@@ -72,6 +73,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [coverImageFit, setCoverImageFit] = useState(config.coverImageFit);
   const [coverImageShape, setCoverImageShape] = useState(config.coverImageShape);
   const [backgroundImagePosition, setBackgroundImagePosition] = useState(config.backgroundImagePosition);
+  const [backgroundImageFilter, setBackgroundImageFilter] = useState(config.backgroundImageFilter);
+  const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(config.backgroundImageOpacity);
   const [instagramUsername, setInstagramUsername] = useState(config.instagramUsername);
   const [spotifyUrl, setSpotifyUrl] = useState(config.spotifyPresaveUrl);
   const [instagramUrl, setInstagramUrl] = useState(config.instagramUrl);
@@ -87,6 +90,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setCoverImageFit(config.coverImageFit);
     setCoverImageShape(config.coverImageShape);
     setBackgroundImagePosition(config.backgroundImagePosition);
+    setBackgroundImageFilter(config.backgroundImageFilter);
+    setBackgroundImageOpacity(config.backgroundImageOpacity);
     setInstagramUsername(config.instagramUsername);
     setSpotifyUrl(config.spotifyPresaveUrl);
     setInstagramUrl(config.instagramUrl);
@@ -246,10 +251,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       const updated = await saveSiteConfigAsync({
         songTitle: songTitle.trim() || 'Dans ma tête',
         artistName: artistName.trim() || 'Kaïna',
-        artistNameFont,
-        coverImageFit,
-        coverImageShape,
-        backgroundImagePosition,
         instagramUsername: instagramUsername.trim().replace(/^@/, '') || 'kaina_officiel',
         spotifyPresaveUrl: spotifyUrl,
         instagramUrl: instagramUrl,
@@ -262,6 +263,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     } catch (error) {
       console.error('Failed to save site settings:', error);
       setSaveFeedback('Échec de l’enregistrement sur Supabase. Vérifie la configuration et les droits admin.');
+    }
+    setTimeout(() => setSaveFeedback(null), 4000);
+  };
+
+  const handleSaveAppearance = async () => {
+    try {
+      const updated = await saveSiteConfigAsync({
+        artistNameFont,
+        coverImageFit,
+        coverImageShape,
+        backgroundImagePosition,
+        backgroundImageFilter,
+        backgroundImageOpacity,
+      });
+      onConfigChange(updated);
+      setSaveFeedback('Apparence enregistrée et appliquée au site.');
+    } catch (error) {
+      reportAdminError('Échec de l’enregistrement de l’apparence', error);
     }
     setTimeout(() => setSaveFeedback(null), 4000);
   };
@@ -777,6 +796,133 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </div>
 
+                  <div className="p-5 rounded-2xl bg-white/[0.03] border border-cyan-400/20 space-y-4 md:col-span-2">
+                    <div>
+                      <h4 className="font-bold text-sm text-white">Apparence du site</h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Choisis le style du nom, de la pochette et de ta photo de fond.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Police du nom de l&apos;artiste
+                        </label>
+                        <select
+                          value={artistNameFont}
+                          onChange={(event) => setArtistNameFont(event.target.value as typeof artistNameFont)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm"
+                        >
+                          <option value="sans">Sans-serif (sobre)</option>
+                          <option value="bebas">Bebas Neue (affiche)</option>
+                          <option value="syne">Syne (moderne)</option>
+                        </select>
+                        <p className={`${artistNameFont === 'bebas' ? 'font-bebas' : artistNameFont === 'syne' ? 'font-syne' : 'font-sans'} mt-2 text-center tracking-[0.3em] text-[#FCEEE3]`}>
+                          {config.artistName.toUpperCase()}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Position de l&apos;image de fond
+                        </label>
+                        <select
+                          value={backgroundImagePosition}
+                          onChange={(event) => setBackgroundImagePosition(event.target.value as typeof backgroundImagePosition)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm"
+                        >
+                          <option value="center">Centrer</option>
+                          <option value="top">Haut</option>
+                          <option value="bottom">Bas</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Filtre de l&apos;image de fond
+                        </label>
+                        <select
+                          value={backgroundImageFilter}
+                          onChange={(event) => setBackgroundImageFilter(event.target.value as typeof backgroundImageFilter)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm"
+                        >
+                          <option value="cool">Bleu froid</option>
+                          <option value="warm">Chaud</option>
+                          <option value="grayscale">Noir et blanc</option>
+                          <option value="none">Aucun filtre</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label htmlFor="background-opacity" className="block text-xs font-medium text-slate-300 mb-1">
+                          Opacité de l&apos;image de fond : {backgroundImageOpacity} %
+                        </label>
+                        <input
+                          id="background-opacity"
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={backgroundImageOpacity}
+                          onChange={(event) => setBackgroundImageOpacity(Number(event.target.value))}
+                          className="w-full accent-cyan-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Cadrage de la pochette
+                        </label>
+                        <select
+                          value={coverImageFit}
+                          onChange={(event) => setCoverImageFit(event.target.value as typeof coverImageFit)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm"
+                        >
+                          <option value="cover">Remplir le cadre (recadrer)</option>
+                          <option value="contain">Afficher l&apos;image entière</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Forme de la pochette
+                        </label>
+                        <select
+                          value={coverImageShape}
+                          onChange={(event) => setCoverImageShape(event.target.value as typeof coverImageShape)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm"
+                        >
+                          <option value="rounded">Coins arrondis</option>
+                          <option value="square">Coins carrés</option>
+                          <option value="circle">Cercle</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {config.bgImage && (
+                      <div className="h-24 overflow-hidden rounded-xl border border-white/10 bg-slate-950">
+                        <img
+                          src={config.bgImage}
+                          alt="Aperçu du filtre et de l’opacité"
+                          className="h-full w-full object-cover"
+                          style={{
+                            objectPosition: backgroundImagePosition,
+                            filter: getBackgroundImageFilter(backgroundImageFilter),
+                            opacity: backgroundImageOpacity / 100,
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleSaveAppearance}
+                      className="w-full sm:w-auto py-2.5 px-5 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 shadow-md cursor-pointer transition-all"
+                    >
+                      Enregistrer l&apos;apparence
+                    </button>
+                  </div>
+
                   {/* Instagram Avatar Card */}
                   <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-4 md:col-span-2">
                     <div className="flex items-center justify-between">
@@ -1107,64 +1253,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <p className="text-[11px] text-slate-400 mt-1">
                           Affiché sous le titre sur la page d&apos;accueil (ex : « K A Ï N A »).
                         </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Police du nom de l&apos;artiste
-                        </label>
-                        <select
-                          value={artistNameFont}
-                          onChange={(event) => setArtistNameFont(event.target.value as typeof artistNameFont)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
-                        >
-                          <option value="sans">Sans-serif (sobre)</option>
-                          <option value="bebas">Bebas Neue (affiche)</option>
-                          <option value="syne">Syne (moderne)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Cadrage de la pochette
-                        </label>
-                        <select
-                          value={coverImageFit}
-                          onChange={(event) => setCoverImageFit(event.target.value as typeof coverImageFit)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
-                        >
-                          <option value="cover">Remplir le cadre (recadrer)</option>
-                          <option value="contain">Afficher l&apos;image entière</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Forme de la pochette
-                        </label>
-                        <select
-                          value={coverImageShape}
-                          onChange={(event) => setCoverImageShape(event.target.value as typeof coverImageShape)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
-                        >
-                          <option value="rounded">Coins arrondis</option>
-                          <option value="square">Coins carrés</option>
-                          <option value="circle">Cercle</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Position de l&apos;image de fond
-                        </label>
-                        <select
-                          value={backgroundImagePosition}
-                          onChange={(event) => setBackgroundImagePosition(event.target.value as typeof backgroundImagePosition)}
-                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
-                        >
-                          <option value="center">Centrer</option>
-                          <option value="top">Haut</option>
-                          <option value="bottom">Bas</option>
-                        </select>
                       </div>
                     </div>
 

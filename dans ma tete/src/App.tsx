@@ -167,6 +167,8 @@ export default function App() {
       <BackgroundView
         customBgUrl={config.bgImage}
         imagePosition={config.backgroundImagePosition}
+        imageFilter={config.backgroundImageFilter}
+        imageOpacity={config.backgroundImageOpacity}
       />
 
       {/* Background Instrumental Audio (ONLY for gate page) */}
