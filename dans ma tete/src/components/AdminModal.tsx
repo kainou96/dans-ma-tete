@@ -7,7 +7,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   SiteConfig,
   FanRecord,
-  saveSiteConfig,
   saveSiteConfigAsync,
   getAllFans,
   resetFanListen,
@@ -31,9 +30,20 @@ import {
   Play,
   Pause,
   Copy,
+  LogOut,
 } from 'lucide-react';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
-import { isSupabaseConfigured, uploadMediaToSupabase } from '../services/supabase';
+import {
+  clearAllFanListensInSupabase,
+  deleteFanFromSupabase,
+  getCurrentAdmin,
+  isSupabaseConfigured,
+  loadFansFromSupabase,
+  resetFanListenInSupabase,
+  signInAdmin,
+  signOutArtist,
+  uploadMediaToSupabase,
+} from '../services/supabase';
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -49,7 +59,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onConfigChange,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -77,6 +88,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setThanksMessage(config.thanksMessage);
   }, [config]);
 
+  useEffect(() => {
+    if (!isOpen || !isSupabaseConfigured) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsCheckingAuth(true);
+    getCurrentAdmin()
+      .then((user) => {
+        if (!isCancelled) setIsAuthenticated(Boolean(user));
+      })
+      .catch((error: unknown) => {
+        console.error('Unable to verify the admin session:', error);
+        if (!isCancelled) {
+          setAuthError('Impossible de vérifier la session Supabase. Réessaie.');
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) setIsCheckingAuth(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen]);
+
   // Audio preview in admin
   const [isAdminAudioPlaying, setIsAdminAudioPlaying] = useState(false);
   const adminAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -98,37 +136,91 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const instrumentalInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fans list
-  const [fans, setFans] = useState<FanRecord[]>(() => getAllFans());
+  const [fans, setFans] = useState<FanRecord[]>([]);
   const [fanSearch, setFanSearch] = useState('');
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const refreshFans = async () => {
+    const remoteFans = await loadFansFromSupabase();
+    const localStateByEmail = new Map(
+      getAllFans().map((fan) => [fan.email.toLowerCase(), fan])
+    );
+    setFans(remoteFans.map((fan) => {
+      const localFan = localStateByEmail.get(fan.email.toLowerCase());
+      return localFan
+        ? {
+            ...fan,
+            hasPlayed: localFan.hasPlayed,
+            hasCompleted: localFan.hasCompleted,
+            playedAt: localFan.playedAt,
+            completedAt: localFan.completedAt,
+          }
+        : fan;
+    }));
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim() === 'kainou96' && password === 'Chipie59390.') {
+    setAuthError(null);
+    setIsCheckingAuth(true);
+    try {
+      await signInAdmin(email.trim(), password);
       setIsAuthenticated(true);
-      setAuthError(null);
-      setFans(getAllFans());
-    } else {
-      setAuthError('Identifiant ou mot de passe incorrect.');
+      setPassword('');
+      try {
+        await refreshFans();
+      } catch (error) {
+        reportAdminError('Impossible de charger la liste des inscriptions', error);
+      }
+    } catch (error) {
+      console.error('Admin sign-in failed:', error);
+      setAuthError(error instanceof Error ? error.message : 'Connexion impossible. Vérifie tes identifiants.');
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
 
-  const handleSaveTextSettings = (e: React.FormEvent) => {
+  const handleSignOut = async () => {
+    try {
+      await signOutArtist();
+      setIsAuthenticated(false);
+      setEmail('');
+      setPassword('');
+      setFans([]);
+    } catch (error) {
+      console.error('Admin sign-out failed:', error);
+      setSaveFeedback('Impossible de fermer la session Supabase.');
+    }
+  };
+
+  const handleSaveTextSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = saveSiteConfig({
-      songTitle: songTitle.trim() || 'Dans ma tête',
-      artistName: artistName.trim() || 'Kaïna',
-      instagramUsername: instagramUsername.trim().replace(/^@/, '') || 'kaina_officiel',
-      spotifyPresaveUrl: spotifyUrl,
-      instagramUrl: instagramUrl,
-      releaseDate: releaseDate,
-      warningText: warningText,
-      thanksMessage: thanksMessage,
-    });
-    onConfigChange(updated);
-    setSaveFeedback('Paramètres enregistrés avec succès !');
-    setTimeout(() => setSaveFeedback(null), 3000);
+    try {
+      const updated = await saveSiteConfigAsync({
+        songTitle: songTitle.trim() || 'Dans ma tête',
+        artistName: artistName.trim() || 'Kaïna',
+        instagramUsername: instagramUsername.trim().replace(/^@/, '') || 'kaina_officiel',
+        spotifyPresaveUrl: spotifyUrl,
+        instagramUrl: instagramUrl,
+        releaseDate: releaseDate,
+        warningText: warningText,
+        thanksMessage: thanksMessage,
+      });
+      onConfigChange(updated);
+      setSaveFeedback('Paramètres enregistrés sur Supabase !');
+    } catch (error) {
+      console.error('Failed to save site settings:', error);
+      setSaveFeedback('Échec de l’enregistrement sur Supabase. Vérifie la configuration et les droits admin.');
+    }
+    setTimeout(() => setSaveFeedback(null), 4000);
+  };
+
+  const reportAdminError = (action: string, error: unknown) => {
+    console.error(`${action}:`, error);
+    const details = error instanceof Error ? ` ${error.message}` : '';
+    setSaveFeedback(`${action}.${details}`);
+    setTimeout(() => setSaveFeedback(null), 5000);
   };
 
   // Upload Background Handler
@@ -137,32 +229,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (file) {
       setIsUploadingBg(true);
       try {
-        let url: string;
-        if (isSupabaseConfigured) {
-          url = await uploadMediaToSupabase('covers', file, 'bg');
-        } else {
-          url = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
+        const url = await uploadMediaToSupabase('covers', file, 'bg');
         const updated = await saveSiteConfigAsync({ bgImage: url });
         onConfigChange(updated);
-        setSaveFeedback(isSupabaseConfigured ? 'Image de fond synchronisée sur Supabase pour tous les visiteurs !' : 'Image de fond mise à jour et sauvegardée !');
-      } catch (err) {
-        console.error('Erreur upload fond:', err);
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const dataUrl = reader.result as string;
-          const updated = await saveSiteConfigAsync({ bgImage: dataUrl });
-          onConfigChange(updated);
-          setSaveFeedback('Image de fond sauvegardée en cache.');
-        };
-        reader.readAsDataURL(file);
+        setSaveFeedback('Image de fond synchronisée sur Supabase pour tous les visiteurs !');
+      } catch (error) {
+        reportAdminError('Échec de l’envoi de l’image de fond', error);
       } finally {
         setIsUploadingBg(false);
-        setTimeout(() => setSaveFeedback(null), 3500);
       }
     }
   };
@@ -173,32 +247,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (file) {
       setIsUploadingCover(true);
       try {
-        let url: string;
-        if (isSupabaseConfigured) {
-          url = await uploadMediaToSupabase('covers', file, 'cover');
-        } else {
-          url = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
+        const url = await uploadMediaToSupabase('covers', file, 'cover');
         const updated = await saveSiteConfigAsync({ coverImage: url });
         onConfigChange(updated);
-        setSaveFeedback(isSupabaseConfigured ? 'Pochette synchronisée sur Supabase pour tous les visiteurs !' : 'Pochette mise à jour et sauvegardée !');
-      } catch (err) {
-        console.error('Erreur upload cover:', err);
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const dataUrl = reader.result as string;
-          const updated = await saveSiteConfigAsync({ coverImage: dataUrl });
-          onConfigChange(updated);
-          setSaveFeedback('Pochette sauvegardée en cache.');
-        };
-        reader.readAsDataURL(file);
+        setSaveFeedback('Pochette synchronisée sur Supabase pour tous les visiteurs !');
+      } catch (error) {
+        reportAdminError('Échec de l’envoi de la pochette', error);
       } finally {
         setIsUploadingCover(false);
-        setTimeout(() => setSaveFeedback(null), 3500);
       }
     }
   };
@@ -209,41 +265,26 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (file) {
       setIsUploadingAvatar(true);
       try {
-        let url: string;
-        if (isSupabaseConfigured) {
-          url = await uploadMediaToSupabase('covers', file, 'avatar');
-        } else {
-          url = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
+        const url = await uploadMediaToSupabase('covers', file, 'avatar');
         const updated = await saveSiteConfigAsync({ instagramAvatar: url });
         onConfigChange(updated);
-        setSaveFeedback(isSupabaseConfigured ? 'Photo Instagram synchronisée sur Supabase !' : 'Photo de profil Instagram mise à jour et sauvegardée !');
-      } catch (err) {
-        console.error('Erreur upload avatar:', err);
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const dataUrl = reader.result as string;
-          const updated = await saveSiteConfigAsync({ instagramAvatar: dataUrl });
-          onConfigChange(updated);
-          setSaveFeedback('Photo Instagram sauvegardée en cache.');
-        };
-        reader.readAsDataURL(file);
+        setSaveFeedback('Photo Instagram synchronisée sur Supabase !');
+      } catch (error) {
+        reportAdminError('Échec de l’envoi de la photo Instagram', error);
       } finally {
         setIsUploadingAvatar(false);
-        setTimeout(() => setSaveFeedback(null), 3500);
       }
     }
   };
 
   const handleResetAvatar = async () => {
-    const updated = await saveSiteConfigAsync({ instagramAvatar: null });
-    onConfigChange(updated);
-    setSaveFeedback('Photo Instagram réinitialisée.');
-    setTimeout(() => setSaveFeedback(null), 2500);
+    try {
+      const updated = await saveSiteConfigAsync({ instagramAvatar: null });
+      onConfigChange(updated);
+      setSaveFeedback('Photo Instagram réinitialisée.');
+    } catch (error) {
+      reportAdminError('Échec de la réinitialisation de la photo Instagram', error);
+    }
   };
 
   // Upload Audio Handler (Exclusive Track)
@@ -252,60 +293,50 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (file) {
       setIsUploadingAudio(true);
       try {
-        let url: string;
-        if (isSupabaseConfigured) {
-          url = await uploadMediaToSupabase('audio', file, 'track');
-        } else {
-          url = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
+        const url = await uploadMediaToSupabase('audio', file, 'track');
         const updated = await saveSiteConfigAsync({
           audioSrc: url,
           audioFileName: file.name,
         });
         onConfigChange(updated);
-        setSaveFeedback(isSupabaseConfigured ? `Morceau audio "${file.name}" synchronisé sur Supabase !` : `Fichier audio "${file.name}" sauvegardé avec succès !`);
-      } catch (err) {
-        console.error('Erreur upload audio:', err);
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const dataUrl = reader.result as string;
-          const updated = await saveSiteConfigAsync({
-            audioSrc: dataUrl,
-            audioFileName: file.name,
-          });
-          onConfigChange(updated);
-          setSaveFeedback(`Fichier audio "${file.name}" sauvegardé en cache.`);
-        };
-        reader.readAsDataURL(file);
+        setSaveFeedback(`Morceau audio "${file.name}" synchronisé sur Supabase !`);
+      } catch (error) {
+        reportAdminError('Échec de l’envoi du morceau audio', error);
       } finally {
         setIsUploadingAudio(false);
-        setTimeout(() => setSaveFeedback(null), 3500);
       }
     }
   };
 
   const handleResetBg = async () => {
-    const updated = await saveSiteConfigAsync({ bgImage: null });
-    onConfigChange(updated);
+    try {
+      const updated = await saveSiteConfigAsync({ bgImage: null });
+      onConfigChange(updated);
+    } catch (error) {
+      reportAdminError('Échec de la réinitialisation de l’image de fond', error);
+    }
   };
 
   const handleResetCover = async () => {
-    const updated = await saveSiteConfigAsync({ coverImage: null });
-    onConfigChange(updated);
+    try {
+      const updated = await saveSiteConfigAsync({ coverImage: null });
+      onConfigChange(updated);
+    } catch (error) {
+      reportAdminError('Échec de la réinitialisation de la pochette', error);
+    }
   };
 
   const handleResetAudio = async () => {
-    const updated = await saveSiteConfigAsync({
-      audioSrc: null,
-      audioFileName: 'Dans ma tête - Kaïna (Démo Exclu).wav',
-    });
-    onConfigChange(updated);
-    setSaveFeedback('Fichier audio exclusif réinitialisé.');
-    setTimeout(() => setSaveFeedback(null), 3000);
+    try {
+      const updated = await saveSiteConfigAsync({
+        audioSrc: null,
+        audioFileName: 'Dans ma tête - Kaïna (Démo Exclu).wav',
+      });
+      onConfigChange(updated);
+      setSaveFeedback('Fichier audio exclusif réinitialisé.');
+    } catch (error) {
+      reportAdminError('Échec de la réinitialisation du morceau audio', error);
+    }
   };
 
   // Upload Instrumental Handler (Home Page Ambient Audio)
@@ -314,71 +345,67 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (file) {
       setIsUploadingInstrumental(true);
       try {
-        let url: string;
-        if (isSupabaseConfigured) {
-          url = await uploadMediaToSupabase('audio', file, 'instrumental');
-        } else {
-          url = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
+        const url = await uploadMediaToSupabase('audio', file, 'instrumental');
         const updated = await saveSiteConfigAsync({
           instrumentalSrc: url,
           instrumentalFileName: file.name,
         });
         onConfigChange(updated);
-        setSaveFeedback(isSupabaseConfigured ? `Bande son d'ambiance "${file.name}" synchronisée sur Supabase !` : `Bande instrumentale "${file.name}" sauvegardée avec succès !`);
-      } catch (err) {
-        console.error('Erreur upload instrumental:', err);
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const dataUrl = reader.result as string;
-          const updated = await saveSiteConfigAsync({
-            instrumentalSrc: dataUrl,
-            instrumentalFileName: file.name,
-          });
-          onConfigChange(updated);
-          setSaveFeedback(`Bande instrumentale "${file.name}" sauvegardée en cache.`);
-        };
-        reader.readAsDataURL(file);
+        setSaveFeedback(`Bande son d'ambiance "${file.name}" synchronisée sur Supabase !`);
+      } catch (error) {
+        reportAdminError('Échec de l’envoi de la bande son d’ambiance', error);
       } finally {
         setIsUploadingInstrumental(false);
-        setTimeout(() => setSaveFeedback(null), 3500);
       }
     }
   };
 
   const handleResetInstrumental = async () => {
-    const updated = await saveSiteConfigAsync({
-      instrumentalSrc: null,
-      instrumentalFileName: 'Dans ma tête - Bande Instrumentale.mp3',
-    });
-    onConfigChange(updated);
-    setSaveFeedback('Bande instrumentale réinitialisée par défaut.');
-    setTimeout(() => setSaveFeedback(null), 3000);
+    try {
+      const updated = await saveSiteConfigAsync({
+        instrumentalSrc: null,
+        instrumentalFileName: 'Dans ma tête - Bande Instrumentale.mp3',
+      });
+      onConfigChange(updated);
+      setSaveFeedback('Bande instrumentale réinitialisée par défaut.');
+    } catch (error) {
+      reportAdminError('Échec de la réinitialisation de la bande son', error);
+    }
   };
 
   // Fan operations
-  const handleResetSingleListen = (email: string) => {
-    resetFanListen(email);
-    setFans(getAllFans());
-    setSaveFeedback(`Écoute réinitialisée pour ${email}`);
-    setTimeout(() => setSaveFeedback(null), 3000);
+  const handleResetSingleListen = async (email: string) => {
+    try {
+      await resetFanListenInSupabase(email);
+      resetFanListen(email);
+      await refreshFans();
+      setSaveFeedback(`Écoute réinitialisée pour ${email}`);
+    } catch (error) {
+      reportAdminError(`Échec de la réinitialisation de l’écoute pour ${email}`, error);
+    }
   };
 
-  const handleDeleteFan = (id: string) => {
-    deleteFan(id);
-    setFans(getAllFans());
+  const handleDeleteFan = async (id: string) => {
+    try {
+      await deleteFanFromSupabase(id);
+      deleteFan(id);
+      await refreshFans();
+      setSaveFeedback('Inscription supprimée.');
+    } catch (error) {
+      reportAdminError('Échec de la suppression de l’inscription', error);
+    }
   };
 
-  const handleClearAllListens = () => {
+  const handleClearAllListens = async () => {
     if (window.confirm('Voulez-vous vraiment réinitialiser l’écoute pour TOUS les inscrits ?')) {
-      clearAllListens();
-      setFans(getAllFans());
-      setSaveFeedback('Toutes les écoutes ont été réinitialisées.');
-      setTimeout(() => setSaveFeedback(null), 3000);
+      try {
+        await clearAllFanListensInSupabase();
+        clearAllListens();
+        await refreshFans();
+        setSaveFeedback('Toutes les écoutes ont été réinitialisées.');
+      } catch (error) {
+        reportAdminError('Échec de la réinitialisation des écoutes', error);
+      }
     }
   };
 
@@ -405,12 +432,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xs"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Déconnexion</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -424,8 +464,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               Accès Administrateur
             </h3>
             <p className="text-xs text-slate-400 text-center mb-5 sm:mb-6 leading-relaxed">
-              Connecte-toi avec tes identifiants Kaïna pour gérer le site, les auditeurs et le titre.
+              Connecte-toi avec le compte Supabase autorisé pour gérer le site, les auditeurs et le titre.
             </p>
+
+            {!isSupabaseConfigured && (
+              <div className="w-full mb-4 p-3 rounded-xl bg-amber-950/50 border border-amber-500/30 text-amber-100 text-xs leading-relaxed">
+                Supabase n’est pas encore configuré. Ajoute l’URL et la clé publique du projet dans les variables d’environnement pour activer l’administration.
+              </div>
+            )}
 
             {authError && (
               <div className="w-full mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-500/30 text-rose-200 text-xs flex items-center gap-2">
@@ -437,15 +483,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <form onSubmit={handleLogin} className="w-full space-y-3.5 sm:space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Identifiant
+                  Adresse e-mail
                 </label>
                 <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="kainou96"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="toi@exemple.fr"
+                  autoComplete="username"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-base sm:text-sm focus:outline-none focus:border-cyan-400"
+                  disabled={!isSupabaseConfigured || isCheckingAuth}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-base sm:text-sm focus:outline-none focus:border-cyan-400 disabled:opacity-50"
                 />
               </div>
 
@@ -457,17 +505,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  autoComplete="current-password"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-base sm:text-sm focus:outline-none focus:border-cyan-400"
+                  disabled={!isSupabaseConfigured || isCheckingAuth}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-base sm:text-sm focus:outline-none focus:border-cyan-400 disabled:opacity-50"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 shadow-lg shadow-cyan-500/20 cursor-pointer mt-2 transition-all active:scale-[0.99]"
+                disabled={!isSupabaseConfigured || isCheckingAuth}
+                className="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 shadow-lg shadow-cyan-500/20 cursor-pointer mt-2 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Se connecter
+                {isCheckingAuth ? 'Vérification…' : 'Se connecter'}
               </button>
             </form>
 
@@ -479,8 +529,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           <div className="flex-1 flex flex-col min-h-0">
             {/* Feedback alert */}
             {saveFeedback && (
-              <div className="bg-emerald-950/80 border-b border-emerald-500/30 px-4 sm:px-6 py-2.5 text-xs text-emerald-200 flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className={`px-4 sm:px-6 py-2.5 text-xs flex items-center gap-2 ${
+                saveFeedback.includes('Échec') || saveFeedback.includes('Impossible')
+                  ? 'bg-rose-950/80 border-b border-rose-500/30 text-rose-200'
+                  : 'bg-emerald-950/80 border-b border-emerald-500/30 text-emerald-200'
+              }`}>
+                {saveFeedback.includes('Échec') || saveFeedback.includes('Impossible')
+                  ? <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  : <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                 <span>{saveFeedback}</span>
               </div>
             )}
@@ -526,7 +582,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <button
                 onClick={() => {
                   setActiveTab('fans');
-                  setFans(getAllFans());
+                  refreshFans().catch((error: unknown) =>
+                    reportAdminError('Impossible de charger la liste des inscriptions', error)
+                  );
                 }}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 font-medium rounded-t-xl transition-all border-b-2 shrink-0 ${
                   activeTab === 'fans'
@@ -1160,7 +1218,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={exportFansToCSV}
+                        onClick={() => exportFansToCSV(fans)}
                         className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5 shrink-0" />

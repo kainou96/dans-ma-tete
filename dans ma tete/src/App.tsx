@@ -7,12 +7,14 @@ import { useState, useEffect, useRef } from 'react';
 import {
   getSiteConfig,
   SiteConfig,
+  hydrateSiteConfigFromRemote,
   getCurrentSession,
   saveCurrentSession,
   clearCurrentSession,
   findFanByEmail,
   subscribeToConfigUpdates,
 } from './services/store';
+import { loadSiteConfigFromSupabase } from './services/supabase';
 import { generateDefaultTrackWavBlob } from './services/audioSynthesizer';
 import { BackgroundView } from './components/BackgroundView';
 import { LandingGate } from './components/LandingGate';
@@ -32,6 +34,18 @@ export default function App() {
     const unsubscribe = subscribeToConfigUpdates((updatedConfig) => {
       setConfig(updatedConfig);
     });
+
+    loadSiteConfigFromSupabase()
+      .then((remoteConfig) => {
+        if (remoteConfig) {
+          const updatedConfig = hydrateSiteConfigFromRemote(remoteConfig);
+          setConfig(updatedConfig);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Unable to load site settings from Supabase:', error);
+      });
+
     return unsubscribe;
   }, []);
 
@@ -240,7 +254,7 @@ export default function App() {
           type="button"
           onClick={() => setIsAdminOpen(true)}
           className="p-2.5 rounded-xl bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/10 hover:border-cyan-400/40 text-slate-400 hover:text-cyan-300 shadow-lg shadow-black/50 transition-all cursor-pointer group active:scale-95"
-          title="Accès Administrateur (kainou96)"
+          title="Accès Administrateur"
           aria-label="Accès Administrateur"
         >
           <Lock className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:text-cyan-400 transition-opacity" />

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { SiteConfig, findFanByEmail, registerOrGetFan } from '../services/store';
+import { isSupabaseConfigured, registerFanInSupabase } from '../services/supabase';
 import { Check, Mail, ExternalLink, AlertCircle } from 'lucide-react';
 
 interface LandingGateProps {
@@ -30,7 +31,7 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
     setErrorMessage(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEmailValid) {
       setErrorMessage('Merci de saisir une adresse email valide.');
@@ -55,10 +56,19 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
       return;
     }
 
-    // Register fan or retrieve existing fan who hadn't clicked play yet
-    registerOrGetFan(normalizedEmail, true);
-    setIsLoading(false);
-    onUnlock(normalizedEmail);
+    try {
+      if (isSupabaseConfigured) {
+        await registerFanInSupabase(normalizedEmail);
+      }
+
+      registerOrGetFan(normalizedEmail, true);
+      onUnlock(normalizedEmail);
+    } catch (error) {
+      console.error('Unable to register fan email:', error);
+      setErrorMessage('Impossible d’enregistrer ton adresse pour le moment. Réessaie dans quelques instants.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

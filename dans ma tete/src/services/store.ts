@@ -51,6 +51,11 @@ const DEFAULT_CONFIG: SiteConfig = {
 };
 
 import { setMediaItem, getMediaItem } from './db';
+import {
+  isSupabaseConfigured,
+  loadSiteConfigFromSupabase,
+  saveSiteConfigToSupabase,
+} from './supabase';
 
 const CONFIG_STORAGE_KEY = 'kaina_site_config_v4';
 const FANS_STORAGE_KEY = 'kaina_fans_registry_v3';
@@ -61,6 +66,7 @@ type MediaKey = typeof MEDIA_KEYS[number];
 
 let inMemoryConfig: SiteConfig = { ...DEFAULT_CONFIG };
 let isIndexedDBLoaded = false;
+let hasRemoteConfigLoaded = false;
 const configListeners = new Set<(config: SiteConfig) => void>();
 
 function notifyConfigListeners() {
@@ -124,10 +130,12 @@ export async function loadMediaFromIndexedDB(): Promise<SiteConfig> {
       }
     }
 
-    inMemoryConfig = {
-      ...inMemoryConfig,
-      ...loadedMedia,
-    };
+    if (!hasRemoteConfigLoaded) {
+      inMemoryConfig = {
+        ...inMemoryConfig,
+        ...loadedMedia,
+      };
+    }
     isIndexedDBLoaded = true;
     notifyConfigListeners();
   } catch (err) {
@@ -175,8 +183,21 @@ export function saveSiteConfig(config: Partial<SiteConfig>): SiteConfig {
   return inMemoryConfig;
 }
 
+export function hydrateSiteConfigFromRemote(config: Partial<SiteConfig>): SiteConfig {
+  hasRemoteConfigLoaded = true;
+  return saveSiteConfig(config);
+}
+
 export async function saveSiteConfigAsync(config: Partial<SiteConfig>): Promise<SiteConfig> {
-  inMemoryConfig = { ...inMemoryConfig, ...config };
+  let updatedConfig = { ...inMemoryConfig, ...config };
+
+  if (isSupabaseConfigured) {
+    const remoteConfig = await loadSiteConfigFromSupabase();
+    updatedConfig = { ...updatedConfig, ...remoteConfig, ...config };
+    await saveSiteConfigToSupabase(updatedConfig);
+  }
+
+  inMemoryConfig = updatedConfig;
 
   // Await all IndexedDB writes so heavy audio files are guaranteed to be saved
   const mediaPromises: Promise<void>[] = [];
@@ -211,30 +232,7 @@ export function getAllFans(): FanRecord[] {
   try {
     const raw = localStorage.getItem(FANS_STORAGE_KEY);
     if (!raw) {
-      const initial: FanRecord[] = [
-        {
-          id: 'fan_demo_1',
-          email: 'fan.kaina@gmail.com',
-          presaved: true,
-          presavedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-          hasPlayed: true,
-          hasCompleted: true,
-          playedAt: new Date(Date.now() - 3600000 * 23).toISOString(),
-          completedAt: new Date(Date.now() - 3600000 * 23 + 180000).toISOString(),
-        },
-        {
-          id: 'fan_demo_2',
-          email: 'lea.music@outlook.fr',
-          presaved: true,
-          presavedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          hasPlayed: false,
-          hasCompleted: false,
-          playedAt: null,
-          completedAt: null,
-        }
-      ];
-      localStorage.setItem(FANS_STORAGE_KEY, JSON.stringify(initial));
-      return initial;
+      return [];
     }
     return JSON.parse(raw);
   } catch {
@@ -365,8 +363,7 @@ export function clearCurrentSession(): void {
   } catch {}
 }
 
-export function exportFansToCSV(): void {
-  const fans = getAllFans();
+export function exportFansToCSV(fans: FanRecord[] = getAllFans()): void {
   if (fans.length === 0) return;
 
   const headers = ['Email', 'Presave Effectué', 'Date Presave', 'A cliqué Play', 'Écoute Terminée', 'Date Écoute'];
