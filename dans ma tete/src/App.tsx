@@ -81,10 +81,12 @@ export default function App() {
 
   // Control background instrumental audio: ONLY on gate page until user unlocks the player!
   useEffect(() => {
+    const audioElement = bgAudioRef.current;
+
     if (currentPage === 'gate' && instrumentalUrl) {
-      if (bgAudioRef.current) {
-        bgAudioRef.current.volume = isBgMuted ? 0 : 0.4;
-        bgAudioRef.current
+      if (audioElement) {
+        audioElement.volume = isBgMuted ? 0 : 0.4;
+        audioElement
           .play()
           .then(() => setIsBgAudioPlaying(true))
           .catch(() => {
@@ -95,9 +97,9 @@ export default function App() {
 
       // User interaction listener to trigger audio if browser policy blocked autoplay
       const handleFirstInteraction = () => {
-        if (currentPage === 'gate' && bgAudioRef.current) {
-          bgAudioRef.current.volume = isBgMuted ? 0 : 0.4;
-          bgAudioRef.current
+        if (currentPage === 'gate' && audioElement) {
+          audioElement.volume = isBgMuted ? 0 : 0.4;
+          audioElement
             .play()
             .then(() => setIsBgAudioPlaying(true))
             .catch(() => {});
@@ -118,15 +120,19 @@ export default function App() {
         window.removeEventListener('click', handleFirstInteraction);
         window.removeEventListener('keydown', handleFirstInteraction);
         window.removeEventListener('scroll', handleFirstInteraction);
+        audioElement?.pause();
       };
-    } else if (currentPage === 'player') {
-      // STOP background audio immediately when on player page!
-      if (bgAudioRef.current) {
-        bgAudioRef.current.pause();
-        bgAudioRef.current.currentTime = 0;
-      }
+    }
+
+    if (audioElement && currentPage === 'player') {
+      audioElement.pause();
+      audioElement.currentTime = 0;
       setIsBgAudioPlaying(false);
     }
+
+    return () => {
+      audioElement?.pause();
+    };
   }, [currentPage, instrumentalUrl, isBgMuted]);
 
   const handleUnlockPlayer = (email: string) => {
@@ -170,10 +176,10 @@ export default function App() {
       {/* Background Instrumental Audio (ONLY for gate page) */}
       {instrumentalUrl && (
         <audio
+          key={instrumentalUrl}
           ref={bgAudioRef}
           src={instrumentalUrl}
           loop
-          autoPlay
           playsInline
           preload="auto"
           onPlay={() => setIsBgAudioPlaying(true)}
