@@ -137,8 +137,61 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Fans list
   const [fans, setFans] = useState<FanRecord[]>([]);
   const [fanSearch, setFanSearch] = useState('');
+  const [isMounted, setIsMounted] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
-  if (!isOpen) return null;
+  const requestClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      onClose();
+      closeTimerRef.current = null;
+    }, 240);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setIsMounted(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!isMounted) return;
+    if (isClosing) {
+      setIsMounted(false);
+      return;
+    }
+
+    setIsClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsMounted(false);
+      closeTimerRef.current = null;
+    }, 240);
+  }, [isOpen, isMounted]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') requestClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  if (!isMounted) return null;
 
   const refreshFans = async () => {
     const remoteFans = await loadFansFromSupabase();
@@ -399,8 +452,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-4xl max-h-[96dvh] sm:max-h-[90vh] bg-slate-900 border border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 bg-black/80 backdrop-blur-md ${isClosing ? 'admin-modal-backdrop-exit' : 'admin-modal-backdrop-enter'}`}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+      aria-hidden={!isOpen}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-modal-title"
+        className={`w-full max-w-4xl max-h-[96dvh] sm:max-h-[90vh] bg-slate-900 border border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 ${isClosing ? 'admin-modal-panel-exit' : 'admin-modal-panel-enter'}`}
+      >
         {/* Top Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 bg-slate-950/70">
           <div className="flex items-center gap-2.5">
@@ -408,7 +472,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
+              <h2 id="admin-modal-title" className="text-sm sm:text-base font-bold text-white tracking-wide">
                 Espace Admin · Kaïna
               </h2>
               <p className="text-[10px] sm:text-[11px] text-slate-400">
@@ -429,8 +493,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
             )}
             <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              onClick={requestClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer hover:rotate-90 hover:bg-rose-500/15"
               aria-label="Fermer"
             >
               <X className="w-5 h-5" />
