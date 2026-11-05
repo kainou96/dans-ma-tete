@@ -7,12 +7,16 @@ import React from 'react';
 
 interface CoverArtViewProps {
   customCoverUrl: string | null;
+  imageFit?: 'cover' | 'contain';
+  imageShape?: 'rounded' | 'square' | 'circle';
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
 export const CoverArtView: React.FC<CoverArtViewProps> = ({
   customCoverUrl,
+  imageFit = 'cover',
+  imageShape = 'rounded',
   className = '',
   size = 'md',
 }) => {
@@ -21,17 +25,26 @@ export const CoverArtView: React.FC<CoverArtViewProps> = ({
     md: 'w-48 h-48 sm:w-60 sm:h-60 text-sm',
     lg: 'w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 text-base',
   }[size];
+  const imageRadius = {
+    rounded: '1rem',
+    square: '0',
+    circle: '50%',
+  }[imageShape];
 
   if (customCoverUrl) {
     return (
-      <div className={`relative aspect-square overflow-hidden rounded-2xl shadow-2xl shadow-sky-950/60 border border-white/10 group ${sizeClasses} ${className}`}>
+      <div
+        className={`relative aspect-square overflow-hidden shadow-2xl shadow-sky-950/60 border border-white/10 group ${sizeClasses} ${className}`}
+        style={{ borderRadius: imageRadius }}
+      >
         <img
           src={customCoverUrl}
           alt="Pochette du single Dans ma tête - Kaïna"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full transition-transform duration-700 group-hover:scale-105"
+          style={{ objectFit: imageFit, borderRadius: imageRadius }}
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 pointer-events-none" style={{ borderRadius: imageRadius }} />
       </div>
     );
   }
@@ -39,9 +52,10 @@ export const CoverArtView: React.FC<CoverArtViewProps> = ({
   // High-fidelity cover reproduction matching "35e1b026.png"
   return (
     <div
-      className={`relative aspect-square overflow-hidden rounded-2xl shadow-2xl shadow-cyan-950/70 border border-white/15 select-none ${sizeClasses} ${className}`}
+      className={`relative aspect-square overflow-hidden shadow-2xl shadow-cyan-950/70 border border-white/15 select-none ${sizeClasses} ${className}`}
       style={{
         background: 'linear-gradient(180deg, #182847 0%, #1c3258 45%, #2a416a 70%, #15223c 100%)',
+        borderRadius: imageRadius,
       }}
     >
       {/* Rain Texture in cover */}

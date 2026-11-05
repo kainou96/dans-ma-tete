@@ -85,7 +85,6 @@ export default function App() {
 
     if (currentPage === 'gate' && instrumentalUrl) {
       if (audioElement) {
-        audioElement.volume = isBgMuted ? 0 : 0.4;
         audioElement
           .play()
           .then(() => setIsBgAudioPlaying(true))
@@ -98,7 +97,6 @@ export default function App() {
       // User interaction listener to trigger audio if browser policy blocked autoplay
       const handleFirstInteraction = () => {
         if (currentPage === 'gate' && audioElement) {
-          audioElement.volume = isBgMuted ? 0 : 0.4;
           audioElement
             .play()
             .then(() => setIsBgAudioPlaying(true))
@@ -120,7 +118,6 @@ export default function App() {
         window.removeEventListener('click', handleFirstInteraction);
         window.removeEventListener('keydown', handleFirstInteraction);
         window.removeEventListener('scroll', handleFirstInteraction);
-        audioElement?.pause();
       };
     }
 
@@ -133,7 +130,13 @@ export default function App() {
     return () => {
       audioElement?.pause();
     };
-  }, [currentPage, instrumentalUrl, isBgMuted]);
+  }, [currentPage, instrumentalUrl]);
+
+  useEffect(() => {
+    if (bgAudioRef.current) {
+      bgAudioRef.current.volume = isBgMuted ? 0 : 0.4;
+    }
+  }, [isBgMuted, instrumentalUrl]);
 
   const handleUnlockPlayer = (email: string) => {
     // Instantly kill background instrumental audio when validating to player page!
@@ -155,23 +158,16 @@ export default function App() {
 
   const handleToggleBgMute = () => {
     if (!bgAudioRef.current) return;
-    if (!isBgMuted && isBgAudioPlaying) {
-      setIsBgMuted(true);
-      bgAudioRef.current.volume = 0;
-    } else {
-      setIsBgMuted(false);
-      bgAudioRef.current.volume = 0.4;
-      bgAudioRef.current
-        .play()
-        .then(() => setIsBgAudioPlaying(true))
-        .catch(() => {});
-    }
+    setIsBgMuted((muted) => !muted);
   };
 
   return (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col justify-between text-slate-100 overflow-x-hidden selection:bg-cyan-500/30">
       {/* Immersive Background */}
-      <BackgroundView customBgUrl={config.bgImage} />
+      <BackgroundView
+        customBgUrl={config.bgImage}
+        imagePosition={config.backgroundImagePosition}
+      />
 
       {/* Background Instrumental Audio (ONLY for gate page) */}
       {instrumentalUrl && (

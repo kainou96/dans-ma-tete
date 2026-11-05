@@ -300,6 +300,8 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
             <div className="shrink-0">
               <CoverArtView
                 customCoverUrl={config.coverImage}
+                imageFit={config.coverImageFit}
+                imageShape={config.coverImageShape}
                 size="sm"
                 className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl shadow-2xl border border-white/25 drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]"
               />

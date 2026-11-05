@@ -7,9 +7,13 @@ import React, { useMemo } from 'react';
 
 interface BackgroundViewProps {
   customBgUrl: string | null;
+  imagePosition?: 'center' | 'top' | 'bottom';
 }
 
-export const BackgroundView: React.FC<BackgroundViewProps> = ({ customBgUrl }) => {
+export const BackgroundView: React.FC<BackgroundViewProps> = ({
+  customBgUrl,
+  imagePosition = 'center',
+}) => {
   // Realistic artistic rain particles
   const rainDrops = useMemo(() => {
     return Array.from({ length: 65 }).map((_, i) => ({
@@ -42,9 +46,10 @@ export const BackgroundView: React.FC<BackgroundViewProps> = ({ customBgUrl }) =
           // Custom background uploaded by Kaïna in admin
           <div className="absolute inset-0">
             <div
-              className="absolute inset-0 bg-cover bg-center opacity-90 scale-105 transition-transform duration-1000"
+              className="absolute inset-0 bg-cover opacity-90 scale-105 transition-transform duration-1000"
               style={{
                 backgroundImage: `url(${customBgUrl})`,
+                backgroundPosition: imagePosition,
                 filter: 'saturate(0.68) contrast(1.12) brightness(0.92) hue-rotate(190deg)',
               }}
             />

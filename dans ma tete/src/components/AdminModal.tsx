@@ -68,6 +68,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Form states for settings
   const [songTitle, setSongTitle] = useState(config.songTitle);
   const [artistName, setArtistName] = useState(config.artistName);
+  const [artistNameFont, setArtistNameFont] = useState(config.artistNameFont);
+  const [coverImageFit, setCoverImageFit] = useState(config.coverImageFit);
+  const [coverImageShape, setCoverImageShape] = useState(config.coverImageShape);
+  const [backgroundImagePosition, setBackgroundImagePosition] = useState(config.backgroundImagePosition);
   const [instagramUsername, setInstagramUsername] = useState(config.instagramUsername);
   const [spotifyUrl, setSpotifyUrl] = useState(config.spotifyPresaveUrl);
   const [instagramUrl, setInstagramUrl] = useState(config.instagramUrl);
@@ -79,6 +83,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   useEffect(() => {
     setSongTitle(config.songTitle);
     setArtistName(config.artistName);
+    setArtistNameFont(config.artistNameFont);
+    setCoverImageFit(config.coverImageFit);
+    setCoverImageShape(config.coverImageShape);
+    setBackgroundImagePosition(config.backgroundImagePosition);
     setInstagramUsername(config.instagramUsername);
     setSpotifyUrl(config.spotifyPresaveUrl);
     setInstagramUrl(config.instagramUrl);
@@ -238,6 +246,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       const updated = await saveSiteConfigAsync({
         songTitle: songTitle.trim() || 'Dans ma tête',
         artistName: artistName.trim() || 'Kaïna',
+        artistNameFont,
+        coverImageFit,
+        coverImageShape,
+        backgroundImagePosition,
         instagramUsername: instagramUsername.trim().replace(/^@/, '') || 'kaina_officiel',
         spotifyPresaveUrl: spotifyUrl,
         instagramUrl: instagramUrl,
@@ -1095,6 +1107,64 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <p className="text-[11px] text-slate-400 mt-1">
                           Affiché sous le titre sur la page d&apos;accueil (ex : « K A Ï N A »).
                         </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Police du nom de l&apos;artiste
+                        </label>
+                        <select
+                          value={artistNameFont}
+                          onChange={(event) => setArtistNameFont(event.target.value as typeof artistNameFont)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="sans">Sans-serif (sobre)</option>
+                          <option value="bebas">Bebas Neue (affiche)</option>
+                          <option value="syne">Syne (moderne)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Cadrage de la pochette
+                        </label>
+                        <select
+                          value={coverImageFit}
+                          onChange={(event) => setCoverImageFit(event.target.value as typeof coverImageFit)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="cover">Remplir le cadre (recadrer)</option>
+                          <option value="contain">Afficher l&apos;image entière</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Forme de la pochette
+                        </label>
+                        <select
+                          value={coverImageShape}
+                          onChange={(event) => setCoverImageShape(event.target.value as typeof coverImageShape)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="rounded">Coins arrondis</option>
+                          <option value="square">Coins carrés</option>
+                          <option value="circle">Cercle</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Position de l&apos;image de fond
+                        </label>
+                        <select
+                          value={backgroundImagePosition}
+                          onChange={(event) => setBackgroundImagePosition(event.target.value as typeof backgroundImagePosition)}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="center">Centrer</option>
+                          <option value="top">Haut</option>
+                          <option value="bottom">Bas</option>
+                        </select>
                       </div>
                     </div>
 

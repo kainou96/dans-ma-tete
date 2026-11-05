@@ -85,7 +85,7 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
           {config.songTitle.toUpperCase()}
         </h1>
 
-        <p className="font-sans text-base xs:text-lg sm:text-xl md:text-2xl font-light tracking-[0.35em] xs:tracking-[0.45em] sm:tracking-[0.6em] text-[#FCEEE3] uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] pl-[0.35em] xs:pl-[0.45em] sm:pl-[0.6em] mt-0.5">
+        <p className={`${config.artistNameFont === 'bebas' ? 'font-bebas' : config.artistNameFont === 'syne' ? 'font-syne' : 'font-sans'} text-base xs:text-lg sm:text-xl md:text-2xl font-light tracking-[0.35em] xs:tracking-[0.45em] sm:tracking-[0.6em] text-[#FCEEE3] uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] pl-[0.35em] xs:pl-[0.45em] sm:pl-[0.6em] mt-0.5`}>
           {config.artistName.includes(' ')
             ? config.artistName.toUpperCase()
             : config.artistName.toUpperCase().split('').join(' ')}

@@ -16,6 +16,10 @@ export interface SiteConfig {
   instagramUsername: string;
   songTitle: string;
   artistName: string;
+  artistNameFont: 'bebas' | 'syne' | 'sans';
+  coverImageFit: 'cover' | 'contain';
+  coverImageShape: 'rounded' | 'square' | 'circle';
+  backgroundImagePosition: 'center' | 'top' | 'bottom';
   releaseDate: string;
   warningText: string;
   thanksMessage: string;
@@ -45,6 +49,10 @@ const DEFAULT_CONFIG: SiteConfig = {
   instagramUsername: 'kaina_officiel',
   songTitle: 'Dans ma tête',
   artistName: 'Kaïna',
+  artistNameFont: 'sans',
+  coverImageFit: 'cover',
+  coverImageShape: 'rounded',
+  backgroundImagePosition: 'center',
   releaseDate: '16 Octobre 2026',
   warningText: 'Installe-toi confortablement, mets des écouteurs et écoute ça au calme. Une écoute est autorisée par adresse e-mail avant la sortie officielle.',
   thanksMessage: 'Merci énormément d’avoir écouter ma chanson jusqu’au bout 🥹 j’espère vraiment qu’elle t’a plu, si tu as le temps de me laisser ton impression, ça compte vraiment pour moi ❤️ J\'ai trop hâte de te lire !',
