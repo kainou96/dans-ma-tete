@@ -11,7 +11,7 @@ import {
   startFanListenInSupabase,
 } from '../services/supabase';
 import { CoverArtView } from './CoverArtView';
-import { Play, Pause, Volume2, VolumeX, ArrowLeft, Send, Phone, Video, Info, ChevronLeft } from 'lucide-react';
+import { Play, Pause, ArrowLeft, Send, Phone, Video, Info, ChevronLeft } from 'lucide-react';
 
 interface ExclusivePlayerProps {
   config: SiteConfig;
@@ -31,7 +31,6 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.85);
   const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -51,9 +50,9 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.volume = volume;
     }
-  }, [volume, isMuted]);
+  }, [volume]);
 
   // When user hits Play for the first time, mark as started
   const handleTogglePlay = async () => {
@@ -366,28 +365,14 @@ export const ExclusivePlayer: React.FC<ExclusivePlayerProps> = ({
 
                 {/* Volume Slider */}
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-[#E8DCD4] transition-colors border border-white/20 shadow-md"
-                    title={isMuted ? 'Activer le son' : 'Couper le son'}
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="w-4 h-4 text-rose-300" />
-                    ) : (
-                      <Volume2 className="w-4 h-4" />
-                    )}
-                  </button>
-
                   <input
                     type="range"
                     min="0"
                     max="1"
                     step="0.05"
-                    value={isMuted ? 0 : volume}
+                    value={volume}
                     onChange={(e) => {
                       setVolume(parseFloat(e.target.value));
-                      setIsMuted(false);
                     }}
                     className="w-16 accent-[#FCEEE3] bg-black/50 rounded-lg h-1.5 cursor-pointer hidden sm:block"
                     title="Volume"

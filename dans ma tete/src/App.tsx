@@ -123,13 +123,8 @@ export default function App() {
 
     if (audioElement && currentPage === 'player') {
       audioElement.pause();
-      audioElement.currentTime = 0;
       setIsBgAudioPlaying(false);
     }
-
-    return () => {
-      audioElement?.pause();
-    };
   }, [currentPage, instrumentalUrl]);
 
   useEffect(() => {
@@ -142,7 +137,6 @@ export default function App() {
     // Instantly kill background instrumental audio when validating to player page!
     if (bgAudioRef.current) {
       bgAudioRef.current.pause();
-      bgAudioRef.current.currentTime = 0;
     }
     setIsBgAudioPlaying(false);
 
@@ -153,11 +147,17 @@ export default function App() {
 
   const handleExitPlayer = () => {
     clearCurrentSession();
+    const audioElement = bgAudioRef.current;
+    if (audioElement) {
+      audioElement
+        .play()
+        .then(() => setIsBgAudioPlaying(true))
+        .catch(() => setIsBgAudioPlaying(false));
+    }
     setCurrentPage('gate');
   };
 
   const handleToggleBgMute = () => {
-    if (!bgAudioRef.current) return;
     setIsBgMuted((muted) => !muted);
   };
 
@@ -180,6 +180,7 @@ export default function App() {
           loop
           playsInline
           preload="auto"
+          muted={isBgMuted}
           onPlay={() => setIsBgAudioPlaying(true)}
           onPause={() => setIsBgAudioPlaying(false)}
         />
