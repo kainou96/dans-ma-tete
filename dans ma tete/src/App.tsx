@@ -20,6 +20,7 @@ import { BackgroundView } from './components/BackgroundView';
 import { LandingGate } from './components/LandingGate';
 import { ExclusivePlayer } from './components/ExclusivePlayer';
 import { AdminModal } from './components/AdminModal';
+import { ReleaseCountdown } from './components/ReleaseCountdown';
 import { Lock, Volume2, VolumeX } from 'lucide-react';
 
 export default function App() {
@@ -234,6 +235,8 @@ export default function App() {
           />
         )}
       </main>
+
+      {currentPage === 'gate' && <ReleaseCountdown releaseDate={config.releaseDate} />}
 
       {/* Bottom Footer: Minimal */}
       <footer className="w-full px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between z-20 text-xs text-slate-400">
