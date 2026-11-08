@@ -240,7 +240,8 @@ export default function App() {
           <LandingGate
             config={config}
             onUnlock={handleUnlockPlayer}
-            hasCountdown={config.countdownEnabled}
+            hasCountdown={config.countdownEnabled && config.countdownPosition !== 'after-button'}
+            countdown={config.countdownPosition === 'after-button' ? countdown : null}
           />
         ) : (
           <ExclusivePlayer

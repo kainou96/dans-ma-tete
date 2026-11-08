@@ -27,7 +27,7 @@ export interface SiteConfig {
   countdownTitle: string;
   countdownTitleSize: 'small' | 'medium' | 'large';
   countdownColor: string;
-  countdownPosition: 'top' | 'bottom';
+  countdownPosition: 'top' | 'bottom' | 'after-button';
   countdownSize: 'small' | 'medium' | 'large';
   warningText: string;
   thanksMessage: string;

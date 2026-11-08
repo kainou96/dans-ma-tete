@@ -1338,10 +1338,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </label>
                         <select
                           value={countdownPosition}
-                          onChange={(e) => setCountdownPosition(e.target.value as 'top' | 'bottom')}
+                          onChange={(e) => setCountdownPosition(e.target.value as 'top' | 'bottom' | 'after-button')}
                           className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
                         >
                           <option value="top">Au-dessus du formulaire</option>
+                          <option value="after-button">Juste sous le bouton « Valider et écouter »</option>
                           <option value="bottom">Sous le formulaire</option>
                         </select>
                       </div>

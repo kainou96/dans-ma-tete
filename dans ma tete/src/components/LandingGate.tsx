@@ -12,9 +12,10 @@ interface LandingGateProps {
   config: SiteConfig;
   onUnlock: (email: string) => void;
   hasCountdown: boolean;
+  countdown: React.ReactNode;
 }
 
-export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock, hasCountdown }) => {
+export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock, hasCountdown, countdown }) => {
   const [email, setEmail] = useState('');
   const [hasPresaved, setHasPresaved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -197,6 +198,7 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock, hasC
             <span>{isLoading ? 'Vérification...' : 'VALIDER ET ECOUTER'}</span>
           </button>
         </div>
+        {countdown}
       </form>
     </div>
   );
