@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 
 interface ReleaseCountdownProps {
   releaseDate: string;
+  title: string;
+  titleSize: 'small' | 'medium' | 'large';
+  color: string;
+  size: 'small' | 'medium' | 'large';
 }
 
 const MONTHS: Record<string, number> = {
@@ -58,18 +62,17 @@ const TIME_UNITS = [
   { label: 'Secondes', seconds: 1 },
 ];
 
-export function ReleaseCountdown({ releaseDate }: ReleaseCountdownProps) {
+export function ReleaseCountdown({ releaseDate, title, titleSize, color, size }: ReleaseCountdownProps) {
   const [now, setNow] = useState(() => Date.now());
   const targetDate = parseReleaseDate(releaseDate);
+  const accentColor = /^#[\da-f]{6}$/i.test(color) ? color : '#FCEEE3';
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const title = targetDate
-    ? 'Compte à rebours avant la sortie'
-    : 'La date de sortie sera bientôt annoncée';
+  const heading = title.trim() || 'Compte à rebours avant la sortie';
   const isReleaseDay = targetDate
     && new Date(now).toDateString() === targetDate.toDateString();
   const hasReleased = targetDate && now >= targetDate.getTime();
@@ -83,32 +86,58 @@ export function ReleaseCountdown({ releaseDate }: ReleaseCountdownProps) {
     remainingSeconds %= seconds;
     return { label, value };
   });
+  const sizeClasses = {
+    small: {
+      container: 'max-w-xs px-3 py-2.5',
+      number: 'text-xl sm:text-2xl',
+      label: 'text-[8px] sm:text-[9px]',
+      grid: 'gap-1.5',
+    },
+    medium: {
+      container: 'max-w-md px-4 py-4 sm:px-6',
+      number: 'text-2xl sm:text-3xl',
+      label: 'text-[9px] sm:text-[10px]',
+      grid: 'gap-2 sm:gap-3',
+    },
+    large: {
+      container: 'max-w-xl px-5 py-5 sm:px-8 sm:py-6',
+      number: 'text-4xl sm:text-5xl',
+      label: 'text-[10px] sm:text-xs',
+      grid: 'gap-3 sm:gap-4',
+    },
+  }[size];
+  const titleSizeClass = {
+    small: 'text-[10px]',
+    medium: 'text-xs sm:text-sm',
+    large: 'text-sm sm:text-base',
+  }[titleSize];
 
   return (
-    <section className="relative z-10 w-full px-4 pb-5 sm:px-6 sm:pb-7" aria-labelledby="release-countdown-title">
-      <div className="mx-auto max-w-md rounded-2xl border border-[#FCEEE3]/20 bg-black/50 px-4 py-4 text-center shadow-xl shadow-black/40 backdrop-blur-md sm:px-6">
+    <section className="relative z-10 w-full px-4 py-2 sm:px-6" aria-labelledby="release-countdown-title">
+      <div className={`mx-auto rounded-2xl border border-[#FCEEE3]/20 bg-black/50 text-center shadow-xl shadow-black/40 backdrop-blur-md ${sizeClasses.container}`}>
         <h2
           id="release-countdown-title"
-          className="font-syne text-xs font-semibold uppercase tracking-[0.2em] text-[#FCEEE3]/80 sm:text-sm"
+          className={`font-syne font-semibold uppercase tracking-[0.2em] ${titleSizeClass}`}
+          style={{ color: accentColor }}
         >
-          {title}
+          {heading}
         </h2>
 
         {targetDate && !hasReleased ? (
-          <div className="mt-3 grid grid-cols-4 gap-2 sm:gap-3" aria-label="Temps restant avant la sortie">
+          <div className={`mt-3 grid grid-cols-4 ${sizeClasses.grid}`} aria-label="Temps restant avant la sortie">
             {values.map(({ label, value }) => (
               <div key={label} className="rounded-xl border border-white/10 bg-white/[0.04] py-2">
-                <div className="font-bebas text-2xl leading-none text-[#FCEEE3] sm:text-3xl">
+                <div className={`font-bebas leading-none ${sizeClasses.number}`} style={{ color: accentColor }}>
                   {String(value).padStart(2, '0')}
                 </div>
-                <div className="mt-1 text-[9px] uppercase tracking-wider text-slate-400 sm:text-[10px]">
+                <div className={`mt-1 uppercase tracking-wider text-slate-400 ${sizeClasses.label}`}>
                   {label}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm font-medium text-[#FCEEE3]">
+          <p className={`mt-2 font-medium ${titleSizeClass}`} style={{ color: accentColor }}>
             {targetDate && isReleaseDay ? 'C’est le jour de la sortie !' : targetDate ? 'La date de sortie est passée.' : releaseDate}
           </p>
         )}

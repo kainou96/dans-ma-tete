@@ -11,9 +11,10 @@ import { Check, Mail, ExternalLink, AlertCircle } from 'lucide-react';
 interface LandingGateProps {
   config: SiteConfig;
   onUnlock: (email: string) => void;
+  hasCountdown: boolean;
 }
 
-export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) => {
+export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock, hasCountdown }) => {
   const [email, setEmail] = useState('');
   const [hasPresaved, setHasPresaved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -78,7 +79,9 @@ export const LandingGate: React.FC<LandingGateProps> = ({ config, onUnlock }) =>
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-5 sm:py-8 flex flex-col items-center justify-center min-h-[calc(100dvh-130px)] sm:min-h-[80vh] z-10">
+    <div className={`w-full max-w-md mx-auto px-4 py-5 sm:py-8 flex flex-col items-center justify-center z-10 ${
+      hasCountdown ? 'min-h-[calc(100dvh-250px)] sm:min-h-[60vh]' : 'min-h-[calc(100dvh-130px)] sm:min-h-[80vh]'
+    }`}>
       {/* 1. Album Artwork Header exact reproduction (DANS MA TÊTE / K A Ï N A / Sortie le [date]) */}
       <div className="text-center space-y-1 mb-5 sm:mb-8 w-full select-none">
         <h1 className="font-bebas text-5xl xs:text-6xl sm:text-7xl md:text-8xl tracking-[0.03em] text-[#FCEEE3] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] leading-none break-words">

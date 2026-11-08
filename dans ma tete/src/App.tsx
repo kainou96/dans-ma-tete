@@ -162,6 +162,16 @@ export default function App() {
     setIsBgMuted((muted) => !muted);
   };
 
+  const countdown = currentPage === 'gate' && config.countdownEnabled ? (
+    <ReleaseCountdown
+      releaseDate={config.releaseDate}
+      title={config.countdownTitle}
+      titleSize={config.countdownTitleSize}
+      color={config.countdownColor}
+      size={config.countdownSize}
+    />
+  ) : null;
+
   return (
     <div className="min-h-screen min-h-[100dvh] relative flex flex-col justify-between text-slate-100 overflow-x-hidden selection:bg-cyan-500/30">
       {/* Immersive Background */}
@@ -222,10 +232,16 @@ export default function App() {
         </div>
       )}
 
+      {config.countdownPosition === 'top' && countdown}
+
       {/* Main Content Area: Page 1 (Gate) or Page 2 (Exclusive Player) */}
       <main className="flex-1 flex items-center justify-center relative z-10 px-2 sm:px-4 w-full">
         {currentPage === 'gate' ? (
-          <LandingGate config={config} onUnlock={handleUnlockPlayer} />
+          <LandingGate
+            config={config}
+            onUnlock={handleUnlockPlayer}
+            hasCountdown={config.countdownEnabled}
+          />
         ) : (
           <ExclusivePlayer
             config={config}
@@ -236,7 +252,7 @@ export default function App() {
         )}
       </main>
 
-      {currentPage === 'gate' && <ReleaseCountdown releaseDate={config.releaseDate} />}
+      {config.countdownPosition === 'bottom' && countdown}
 
       {/* Bottom Footer: Minimal */}
       <footer className="w-full px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between z-20 text-xs text-slate-400">

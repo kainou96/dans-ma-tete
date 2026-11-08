@@ -79,6 +79,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [spotifyUrl, setSpotifyUrl] = useState(config.spotifyPresaveUrl);
   const [instagramUrl, setInstagramUrl] = useState(config.instagramUrl);
   const [releaseDate, setReleaseDate] = useState(config.releaseDate);
+  const [countdownEnabled, setCountdownEnabled] = useState(config.countdownEnabled);
+  const [countdownTitle, setCountdownTitle] = useState(config.countdownTitle);
+  const [countdownTitleSize, setCountdownTitleSize] = useState(config.countdownTitleSize);
+  const [countdownColor, setCountdownColor] = useState(config.countdownColor);
+  const [countdownPosition, setCountdownPosition] = useState(config.countdownPosition);
+  const [countdownSize, setCountdownSize] = useState(config.countdownSize);
   const [warningText, setWarningText] = useState(config.warningText);
   const [thanksMessage, setThanksMessage] = useState(config.thanksMessage);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
@@ -96,6 +102,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setSpotifyUrl(config.spotifyPresaveUrl);
     setInstagramUrl(config.instagramUrl);
     setReleaseDate(config.releaseDate);
+    setCountdownEnabled(config.countdownEnabled);
+    setCountdownTitle(config.countdownTitle);
+    setCountdownTitleSize(config.countdownTitleSize);
+    setCountdownColor(config.countdownColor);
+    setCountdownPosition(config.countdownPosition);
+    setCountdownSize(config.countdownSize);
     setWarningText(config.warningText);
     setThanksMessage(config.thanksMessage);
   }, [config]);
@@ -255,6 +267,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         spotifyPresaveUrl: spotifyUrl,
         instagramUrl: instagramUrl,
         releaseDate: releaseDate,
+        countdownEnabled,
+        countdownTitle: countdownTitle.trim() || 'Compte à rebours avant la sortie',
+        countdownTitleSize,
+        countdownColor,
+        countdownPosition,
+        countdownSize,
         warningText: warningText,
         thanksMessage: thanksMessage,
       });
@@ -1272,6 +1290,93 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         Affiché en noir et en gras sous le nom d&apos;artiste (ex : « 16 Octobre 2026 »).
                       </p>
                     </div>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-4">
+                    <h4 className="font-bold text-sm text-white">Compte à rebours</h4>
+                    <label className="flex items-center gap-3 text-xs font-medium text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={countdownEnabled}
+                        onChange={(e) => setCountdownEnabled(e.target.checked)}
+                        className="h-4 w-4 accent-cyan-400"
+                      />
+                      Afficher le compte à rebours en bas de la page d&apos;accueil
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Texte du titre
+                        </label>
+                        <input
+                          type="text"
+                          value={countdownTitle}
+                          onChange={(e) => setCountdownTitle(e.target.value)}
+                          maxLength={70}
+                          placeholder="Compte à rebours avant la sortie"
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Couleur du titre et des chiffres
+                        </label>
+                        <input
+                          type="color"
+                          value={countdownColor}
+                          onChange={(e) => setCountdownColor(e.target.value)}
+                          className="h-10 w-full sm:w-20 rounded-lg bg-slate-950 border border-white/10 cursor-pointer"
+                          aria-label="Couleur du compte à rebours"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Emplacement
+                        </label>
+                        <select
+                          value={countdownPosition}
+                          onChange={(e) => setCountdownPosition(e.target.value as 'top' | 'bottom')}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="top">Au-dessus du formulaire</option>
+                          <option value="bottom">Sous le formulaire</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Taille du bloc
+                        </label>
+                        <select
+                          value={countdownSize}
+                          onChange={(e) => setCountdownSize(e.target.value as 'small' | 'medium' | 'large')}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="small">Petit</option>
+                          <option value="medium">Moyen</option>
+                          <option value="large">Grand</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Taille du titre
+                        </label>
+                        <select
+                          value={countdownTitleSize}
+                          onChange={(e) => setCountdownTitleSize(e.target.value as 'small' | 'medium' | 'large')}
+                          className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-cyan-400"
+                        >
+                          <option value="small">Petit</option>
+                          <option value="medium">Moyen</option>
+                          <option value="large">Grand</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Le décompte utilise la date de sortie officielle définie ci-dessus. Enregistre les modifications pour les publier.
+                    </p>
                   </div>
 
                   {/* Section 2: Compte Instagram & Liens */}
